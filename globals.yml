@@ -1,0 +1,13 @@
+spring:
+  profiles:
+    group:
+      "local": "local,common"
+      "dev": "dev,common"
+      "prod": "prod,common"
+      "default": "local,common"
+      "gateway-local": "gateway-local,local,common"
+      "gateway-dev": "gateway-dev,dev,common"
+      "gateway-prod": "gateway-prod,prod,common"
+## spring boot 2.4 이후 spring.profiles.active 는 deprecated 되고 spring.config.activate.on-profile 로 사용함
+## spring.profiles.group 으로 N개의 profile를 묶어서 사용가능.
+### 서버 실행 시 "-Dspring.profiles.active=local" 을 주면 spring.config.activate.on-profile=local, spring.config.activate.on-profile=common 프로파일을 로딩함

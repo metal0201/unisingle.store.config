@@ -1,0 +1,8 @@
+spring:
+  config:
+    activate:
+      on-profile: common
+
+message:
+  test:
+    comment: spring.config.activate.on-profile is common

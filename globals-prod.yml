@@ -1,0 +1,387 @@
+---
+##=================================================##
+##== Globals properties - prod
+##=================================================##
+spring:
+  config:
+    activate:
+      on-profile: prod
+  cloud:
+    inetutils:
+      ignored-interfaces: ## 해당 인터페이스 무시
+        - eth0*
+      preferred-networks: 10.0 ## 선호하는 IP 주소 설정
+  # DataSource Config
+  oracle:
+    datasource:
+      # driver-class-name: oracle.jdbc.OracleDriver
+      # jdbc-url: jdbc:oracle:thin:@cupia.iptime.org:11521:ORCLCDB
+      driver-class-name: net.sf.log4jdbc.sql.jdbcapi.DriverSpy
+      jdbc-url: jdbc:log4jdbc:oracle:thin:@220.82.24.16:1521:tancis
+      username: single
+      password: single1!
+      hikari:
+        connectionTimeout: 30000
+        maximumPoolSize: 10
+        maxLifetime: 1800000
+        poolName: HikariCP
+        readOnly: false
+        connectionTestQuery: SELECT 1 FROM DUAL
+  mysql: # 다중 Datasource 설정
+    datasource:
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      jdbc-url: jdbc:mysql://localhost:3306/example?serverTimezone=UTC&characterEncoding=UTF-8
+      username: unisingle
+      password: unisingle1!
+      hikari:
+        connectionTimeout: 30000
+        maximumPoolSize: 10
+        maxLifetime: 1800000
+        poolName: HikariCP
+        readOnly: false
+        connectionTestQuery: SELECT 1
+  # JPA Config
+  jpa:
+    generate-ddl: false
+    database: oracle
+    database-platform: org.hibernate.dialect.OracleDialect
+    show-sql: false
+    properties:
+      hibernate:
+        default_batch_fetch_size: 1000
+        format_sql: false
+  # Redis Config
+  # redis:
+  #   host: 34.125.167.48
+  #   port: 6379
+  #   lettuce:
+  #     pool:
+  #       max-active: 10
+  #       max-idle: 10
+  #       min-idle: 2
+  # File
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 50MB
+      location: /home/tancis/ntancis/static
+
+# mamagement
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  endpoint:
+    shutdown:
+      enabled: true
+
+# Eureka Client
+eureka:
+  instance:
+    prefer-ip-address: true
+    ## default로 heartbeat를 30초마다 보내고 서버는 보호 모드로 인해 heartbeat를 90초동안 받지 못한다면 instance를 제거한다. 보호모드 제거시 60초에 instance제거
+    ## 이는 client장애가 발생해도 최악의 경우 60초동안 client 연결을 유지시켜준다는 뜻, 사용자 입장에선 최악
+    ## 이를 방지하기 위해 10초마다 heartbeat를 전송하고
+    lease-renewal-interval-in-seconds: 10 # (default: 30)
+    ## heartbeat 못받고 20초가 지나가면 인스턴스가 제거된다. 더이상 클라이언트로 서비스를 서버가 보내지 않는다
+    lease-expiration-duration-in-seconds: 20 # (default: 90, 단, Eureka Instance가 정상적으로 종료된 경우 Registry에서 바로 제거된다)
+  client:
+    # enabled: true
+    service-url:
+      defaultZone: http://192.168.10.201:9000/eureka
+      # defaultZone: http://${spring.security.user.name}:${spring.security.user.passowrd}@localhost:${server.port}/eureka # spring.security.user.name/passowrd를 지정했을 경우
+    registry-fetch-interval-seconds: 15 ## 서비스 목록을 설정한 시간마다 캐싱 (디폴트 30초)
+    disable-delta: true ## 캐싱 시 변경된 부분만 업데이트할 지 여부 (디폴트 false), false 로 설정 서 대역폭 낭비이므로 true 로 설정할 것
+    ## 유레카 서버에 본인 서비스를 등록할 건지 여부
+    register-with-eureka: true # (default: true)
+    ## 유레카 서버로부터 서비스 목록을 로컬 캐시에 저장할 건지 여부
+    fetch-registry: true # (default: true)
+
+# Resilience4j.circuitbreaker
+resilience4j.circuitbreaker:
+  configs:
+    default:
+      failureRateThreshold: 50
+      slowCallRateThreshold: 100
+      slowCallDurationThreshold: 60000
+      permittedNumberOfCallsInHalfOpenState: 2
+      maxWaitDurationInHalfOpenState: 1000
+      slidingWindowType: COUNT_BASED
+      slidingWindowSize: 10
+      minimumNumberOfCalls: 10
+      waitDurationInOpenState: 10000
+      # recordExceptions:
+      #   - org.springframework.web.client.HttpServerErrorException
+      #   - java.util.concurrent.TimeoutException
+      #   - java.io.IOException
+      #   - java.net.ConnectException
+      # ignoreExceptions: "[]"
+  instances:
+    lpco:
+      baseConfig: default
+    commoncodes:
+      baseConfig: default
+# resilience4j.retry:
+#     configs:
+#         default:
+#             maxAttempts: 3
+#             waitDuration: 100
+#             retryExceptions:
+#                 - org.springframework.web.client.HttpServerErrorException
+#                 - java.util.concurrent.TimeoutException
+#                 - java.io.IOException
+#             ignoreExceptions:
+#                 - io.github.robwin.exception.BusinessException
+#     # instances:
+#     #     backendA:
+#     #         baseConfig: default
+#     #     backendB:
+#     #         baseConfig: default
+# resilience4j.bulkhead:
+#     configs:
+#         default:
+#             maxConcurrentCalls: 100
+#     # instances:
+#     #     backendA:
+#     #         maxConcurrentCalls: 10
+#     #     backendB:
+#     #         maxWaitDuration: 10ms
+#     #         maxConcurrentCalls: 20
+
+# resilience4j.thread-pool-bulkhead:
+#     configs:
+#         default:
+#             maxThreadPoolSize: 4
+#             coreThreadPoolSize: 2
+#             queueCapacity: 2
+#     # instances:
+#     #     backendA:
+#     #         baseConfig: default
+#     #     backendB:
+#     #         maxThreadPoolSize: 1
+#     #         coreThreadPoolSize: 1
+#     #         queueCapacity: 1
+
+# resilience4j.ratelimiter:
+#     configs:
+#         default:
+#             registerHealthIndicator: false
+#             limitForPeriod: 10
+#             limitRefreshPeriod: 1s
+#             timeoutDuration: 0
+#             eventConsumerBufferSize: 100
+#     # instances:
+#     #     backendA:
+#     #         baseConfig: default
+#     #     backendB:
+#     #         limitForPeriod: 6
+#     #         limitRefreshPeriod: 500ms
+#     #         timeoutDuration: 3s
+
+# resilience4j.timelimiter:
+#     configs:
+#         default:
+#             cancelRunningFuture: false
+#             timeoutDuration: 2s
+#     # instances:
+#     #     backendA:
+#     #         baseConfig: default
+#     #     backendB:
+#     #         baseConfig: default
+
+# Logging
+logging:
+  level:
+    root: INFO
+    "[or.uni.single]": debug
+    "[org.springframework]": info
+    "[com.netflix]": warn
+    org:
+      hibernate:
+        type:
+          descriptor:
+            sql: off
+
+---
+##=================================================##
+##== Gateway properties - prod
+##=================================================##
+
+spring:
+  config:
+    activate:
+      on-profile: gateway-prod
+  cloud:
+    loadbalancer:
+      ribbon:
+        enabled: false
+      cache:
+        enabled: false
+    gateway:
+      # CORS 해결
+      globalcors:
+        cors-configurations:
+          "[/**]":
+            allowedOrigins: # Client IP 등록
+              - http://220.82.24.16:3000
+              - http://183.107.31.131:3000
+              - http://119.204.73.146:3000
+              - http://192.168.10.200:3000
+              - http://192.168.10.201:3000
+              - http://192.168.10.202:3000
+              - http://localhost:3000
+            allow-credentials: true
+            allowedHeaders:
+              - x-requested-with
+              - authorization
+              - content-type
+              - credential
+              - X-AUTH-TOKEN
+              - X-CSRF-TOKEN
+            allowedMethods:
+              - POST
+              - GET
+              - PUT
+              - OPTIONS
+              - DELETE
+      httpclient:
+        connect-timeout: 10000
+        response-timeout: 10s
+      routes:
+        ## Auth : 로그인, Token 생성 등
+        - id: unisingle.server.auth.drf
+          uri: lb://unisingle.server.auth.drf
+          predicates:
+            - Path=/admin/**, /accounts/**
+
+        ## Comm : 공통팝업, 파일업로드/다운로드 등
+        - id: unisingle.service.comm
+          uri: lb://unisingle.service.comm
+          predicates:
+            - Path=/comm/**
+          filters:
+            # - AuthorizationFilter
+            - name: Retry
+              args:
+                retires: 3 ## 재시도 횟수
+                statuses: BAD_GATEWAY, INTERNAL_SERVER_ERROR, SERVICE_UNAVAILABLE, GATEWAY_TIMEOUT
+                methods: GET, POST
+                backoff:
+                  firstBackoff: 500ms ## 첫번째 재시도는 실패 후 0.5초 후 수행
+                  maxBackoff: 2000ms ## 재시도 간격
+                  factor: 2 ## firstBackoff * (factor^retries)가 재시도 간격임. maxBackoff보다 클 수는 없음.
+                  baseOnPreviousValue: false
+                  # exceptions:             # Connect가 안되는 경우에만 retry
+                  #   - java.net.ConnectException
+          metadata:
+            connect-timeout: 2000
+            response-timeout: 15000
+
+        ## Lpco
+        - id: unisingle.service.lpco
+          uri: lb://unisingle.service.lpco
+          predicates:
+            - Path=/lpco/**
+          filters:
+            - AuthorizationFilter
+            - name: Retry
+              args:
+                retires: 3 ## 재시도 횟수
+                statuses: BAD_GATEWAY, INTERNAL_SERVER_ERROR, SERVICE_UNAVAILABLE, GATEWAY_TIMEOUT
+                methods: GET, POST
+                backoff:
+                  firstBackoff: 500ms ## 첫번째 재시도는 실패 후 0.5초 후 수행
+                  maxBackoff: 2000ms ## 재시도 간격
+                  factor: 2 ## firstBackoff * (factor^retries)가 재시도 간격임. maxBackoff보다 클 수는 없음.
+                  baseOnPreviousValue: false
+                  # exceptions:             # Connect가 안되는 경우에만 retry
+                  #   - java.net.ConnectException
+          metadata:
+            connect-timeout: 2000
+            response-timeout: 15000
+
+        ## Party
+        - id: unisingle.service.party
+          uri: lb://unisingle.service.party
+          predicates:
+            - Path=/party/**
+          filters:
+            - AuthorizationFilter
+            - name: Retry
+              args:
+                retires: 3 ## 재시도 횟수
+                statuses: BAD_GATEWAY, INTERNAL_SERVER_ERROR, SERVICE_UNAVAILABLE, GATEWAY_TIMEOUT
+                methods: GET, POST
+                backoff:
+                  firstBackoff: 500ms ## 첫번째 재시도는 실패 후 0.5초 후 수행
+                  maxBackoff: 2000ms ## 재시도 간격
+                  factor: 2 ## firstBackoff * (factor^retries)가 재시도 간격임. maxBackoff보다 클 수는 없음.
+                  baseOnPreviousValue: false
+                  # exceptions:             # Connect가 안되는 경우에만 retry
+                  #   - java.net.ConnectException
+          metadata:
+            connect-timeout: 2000
+            response-timeout: 15000
+
+        ## ucr
+        - id: unisingle.service.ucr
+          uri: lb://unisingle.service.ucr
+          predicates:
+            - Path=/ucr/**
+          filters:
+            - AuthorizationFilter
+            - name: Retry
+              args:
+                retires: 3 ## 재시도 횟수
+                statuses: BAD_GATEWAY, INTERNAL_SERVER_ERROR, SERVICE_UNAVAILABLE, GATEWAY_TIMEOUT
+                methods: GET, POST
+                backoff:
+                  firstBackoff: 500ms ## 첫번째 재시도는 실패 후 0.5초 후 수행
+                  maxBackoff: 2000ms ## 재시도 간격
+                  factor: 2 ## firstBackoff * (factor^retries)가 재시도 간격임. maxBackoff보다 클 수는 없음.
+                  baseOnPreviousValue: false
+                  # exceptions:             # Connect가 안되는 경우에만 retry
+                  #   - java.net.ConnectException
+          metadata:
+            connect-timeout: 1000
+            response-timeout: 3000
+
+        ## CommCode
+        - id: unisingle.services.comm.drf
+          uri: lb://unisingle.services.comm.drf
+          predicates:
+            - Path=/commoncodes/**, /i18n/**
+          filters:
+            #- AuthorizationFilter
+            - name: Retry
+              args:
+                retires: 3 ## 재시도 횟수
+                statuses: BAD_GATEWAY, INTERNAL_SERVER_ERROR, SERVICE_UNAVAILABLE, GATEWAY_TIMEOUT
+                methods: GET, POST
+                backoff:
+                  firstBackoff: 500ms ## 첫번째 재시도는 실패 후 0.5초 후 수행
+                  maxBackoff: 2000ms ## 재시도 간격
+                  factor: 2 ## firstBackoff * (factor^retries)가 재시도 간격임. maxBackoff보다 클 수는 없음.
+                  baseOnPreviousValue: false
+                  # exceptions:             # Connect가 안되는 경우에만 retry
+                  #   - java.net.ConnectException
+          metadata:
+            connect-timeout: 10000
+            response-timeout: 30000
+
+  # security:
+  #   oauth2:
+  #     #1. signkey 방식 - 인증서버를 거치지 않고 signkey만으로 토큰 체크, 인증서버와 리소스서버의 skgnkey는 동일해야함
+  #     jwt:
+  #       signkey: jwt_unisingle
+  #       #2. client와 token-info-urifh 토큰 체크
+  #       # client:
+  #       #   client-id: unisingle
+  #       #   client-secret: unisingle1!@
+  #       # resource:
+  #       #   token-info-uri: http://localhost:8901/auth/oauth/check_token # API서버설정 OAuth2 서버에서 기본적으로 Token 정보를 받아오는 URL
+  #       # 3. 비대칭키 방식, /oauth/token_key 이용, token_key에 의해 모든 석정이 적용됨(암호화방식, 공개키 제공)
+  #       resource:
+  #         jwt:
+  #           key-uri: http://localhost:8901/oauth/token_key
